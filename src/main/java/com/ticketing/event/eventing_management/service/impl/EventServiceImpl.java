@@ -2,8 +2,8 @@ package com.ticketing.event.eventing_management.service.impl;
 
 import com.ticketing.event.eventing_management.dto.CapacityDto;
 import com.ticketing.event.eventing_management.dto.EventDto;
-import com.ticketing.event.eventing_management.enity.Event;
-import com.ticketing.event.eventing_management.enity.Ticket;
+import com.ticketing.event.eventing_management.entity.Event;
+import com.ticketing.event.eventing_management.entity.Ticket;
 import com.ticketing.event.eventing_management.repository.EventRepository;
 import com.ticketing.event.eventing_management.repository.TicketRepository;
 import com.ticketing.event.eventing_management.service.EventService;

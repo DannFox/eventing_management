@@ -1,7 +1,7 @@
 package com.ticketing.event.eventing_management.service.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.ticketing.event.eventing_management.enity.Event;
+import com.ticketing.event.eventing_management.entity.Event;
 import com.ticketing.event.eventing_management.repository.EventRepository;
 import com.ticketing.event.eventing_management.service.WordPressService;
 import lombok.RequiredArgsConstructor;

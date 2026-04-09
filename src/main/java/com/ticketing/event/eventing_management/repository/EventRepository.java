@@ -1,6 +1,6 @@
 package com.ticketing.event.eventing_management.repository;
 
-import com.ticketing.event.eventing_management.enity.Event;
+import com.ticketing.event.eventing_management.entity.Event;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

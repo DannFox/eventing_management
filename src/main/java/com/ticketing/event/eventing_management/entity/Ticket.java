@@ -1,4 +1,4 @@
-package com.ticketing.event.eventing_management.enity;
+package com.ticketing.event.eventing_management.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
