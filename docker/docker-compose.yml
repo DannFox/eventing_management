@@ -1,0 +1,109 @@
+version: '3.8'
+
+services:
+  mysql-events:
+    image: mysql:8.0
+    container_name: mysql-events
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-eventdb}
+      MYSQL_USER: ${MYSQL_USER:-eventuser}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-eventpass}
+    ports:
+      - "${MYSQL_PORT:-3307}:3306"
+    volumes:
+      - mysql_events_data:/var/lib/mysql
+    networks:
+      - event-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis-events
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    networks:
+      - event-network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq-shared
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MGMT_PORT:-15672}:15672"
+    networks:
+      - event-network
+
+  # Servicio de la aplicación Spring Boot (para el Hito 2/3)
+  event-app:
+    build: ..
+    container_name: event-management-app
+    restart: unless-stopped
+    ports:
+      - "${SERVER_PORT:-8081}:8081"
+    environment:
+      SERVER_PORT: 8081
+      DATASOURCE_URL: jdbc:mysql://mysql-events:3306/eventdb?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      DATASOURCE_USERNAME: ${MYSQL_USER:-eventuser}
+      DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-eventpass}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-guest}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+      WORDPRESS_API_URL: ${WORDPRESS_API_URL}
+    depends_on:
+      - mysql-events
+      - redis
+      - rabbitmq
+    networks:
+      - event-network
+
+    # ========== WORDPRESS + WOOCOMMERCE (Grupo A) ==========
+  wordpress-db:
+      image: mysql:8.0
+      container_name: wordpress-db
+      restart: unless-stopped
+      environment:
+        MYSQL_ROOT_PASSWORD: ${WP_DB_ROOT_PASSWORD:-root}
+        MYSQL_DATABASE: ${WP_DB_NAME:-wordpress}
+        MYSQL_USER: ${WP_DB_USER:-wpuser}
+        MYSQL_PASSWORD: ${WP_DB_PASSWORD:-wppass}
+      volumes:
+        - wordpress_db_data:/var/lib/mysql
+      networks:
+        - event-network
+
+  wordpress:
+      image: wordpress:latest
+      container_name: wordpress
+      restart: unless-stopped
+      depends_on:
+        - wordpress-db
+      environment:
+        WORDPRESS_DB_HOST: wordpress-db
+        WORDPRESS_DB_USER: ${WP_DB_USER:-wpuser}
+        WORDPRESS_DB_PASSWORD: ${WP_DB_PASSWORD:-wppass}
+        WORDPRESS_DB_NAME: ${WP_DB_NAME:-wordpress}
+        WORDPRESS_TABLE_PREFIX: wp_
+      ports:
+        - "${WORDPRESS_PORT:-8080}:80"
+      volumes:
+        - wordpress_data:/var/www/html
+      networks:
+        - event-network
+
+volumes:
+  mysql_events_data:
+  wordpress_db_data:
+  wordpress_data:
+
+networks:
+  event-network:
+    driver: bridge
