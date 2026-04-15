@@ -10,15 +10,22 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class WordPressServiceImplementation implements WordPressService {
+public class WordPressServiceImpl implements WordPressService {
+    private static final List<DateTimeFormatter> EVENT_DATE_FORMATS = List.of(
+            DateTimeFormatter.ISO_DATE_TIME,
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"),
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+    );
 
     private final RestClient.Builder restClientBuilder;
     private final EventRepository eventRepository;
@@ -29,12 +36,22 @@ public class WordPressServiceImplementation implements WordPressService {
     @Override
     @CacheEvict(value = "events", allEntries = true)
     public void syncEvents() {
-        RestClient restClient = restClientBuilder.baseUrl(wordpressBaseUrl).build();
+        String eventsEndpoint = buildEventsEndpoint();
+        RestClient restClient = restClientBuilder.build();
 
-        JsonNode response = restClient.get()
-                .uri("/events?per_page=100")
-                .retrieve()
-                .body(JsonNode.class);
+        JsonNode response;
+        try {
+            response = restClient.get()
+                    .uri(eventsEndpoint)
+                    .retrieve()
+                    .body(JsonNode.class);
+        } catch (RestClientException ex) {
+            throw new IllegalStateException(
+                    "No se pudo consultar WordPress en \"" + eventsEndpoint + "\". " +
+                            "Verifica WORDPRESS_API_URL y que el host sea accesible desde donde corre la API.",
+                    ex
+            );
+        }
 
         if (response == null || !response.isArray()) {
             log.warn("La respuesta de WordPress no contiene una lista de eventos");
@@ -88,17 +105,38 @@ public class WordPressServiceImplementation implements WordPressService {
         }
     }
 
+    private String buildEventsEndpoint() {
+        if (wordpressBaseUrl == null || wordpressBaseUrl.isBlank()) {
+            throw new IllegalStateException("La propiedad wordpress.api.base-url no está configurada");
+        }
+
+        String normalizedUrl = wordpressBaseUrl.trim();
+        while (normalizedUrl.endsWith("/")) {
+            normalizedUrl = normalizedUrl.substring(0, normalizedUrl.length() - 1);
+        }
+
+        if (normalizedUrl.endsWith("/event")) {
+            return normalizedUrl + "?per_page=100";
+        }
+
+        return normalizedUrl + "/event?per_page=100";
+    }
+
     private LocalDateTime parseEventDate(String eventDateStr) {
         if (eventDateStr == null || eventDateStr.isBlank()) {
             return null;
         }
 
-        try {
-            return LocalDateTime.parse(eventDateStr, DateTimeFormatter.ISO_DATE_TIME);
-        } catch (DateTimeParseException ex) {
-            log.warn("No se pudo parsear la fecha del evento: {}", eventDateStr);
-            return null;
+        for (DateTimeFormatter formatter : EVENT_DATE_FORMATS) {
+            try {
+                return LocalDateTime.parse(eventDateStr, formatter);
+            } catch (DateTimeParseException ignored) {
+                // Intentamos con el siguiente formato soportado.
+            }
         }
+
+        log.warn("No se pudo parsear la fecha del evento: {}", eventDateStr);
+        return null;
     }
 
     private String extractCategory(JsonNode jsonEvent) {

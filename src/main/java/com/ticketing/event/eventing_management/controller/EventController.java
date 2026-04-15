@@ -1,7 +1,7 @@
 package com.ticketing.event.eventing_management.controller;
 
-import com.ticketing.event.eventing_management.dto.CapacityDto;
-import com.ticketing.event.eventing_management.dto.EventDto;
+import com.ticketing.event.eventing_management.dto.CapacityDTO;
+import com.ticketing.event.eventing_management.dto.EventDTO;
 import com.ticketing.event.eventing_management.service.EventService;
 import com.ticketing.event.eventing_management.service.WordPressService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -23,7 +23,7 @@ public class EventController {
 
     @GetMapping
     @Operation(summary = "Listar eventos activos paginados")
-    public ResponseEntity<Page<EventDto>> getEvents(
+    public ResponseEntity<Page<EventDTO>> getEvents(
             @RequestParam(required = false) String category,
             @PageableDefault(size = 20) Pageable pageable) {
         return ResponseEntity.ok(eventService.getActiveEvents(category, pageable));
@@ -38,13 +38,13 @@ public class EventController {
 
     @GetMapping("/{id}/capacity")
     @Operation(summary = "Consultar capacidad y aforo de un evento")
-    public ResponseEntity<CapacityDto> getEventCapacity(@PathVariable Long id) {
+    public ResponseEntity<CapacityDTO> getEventCapacity(@PathVariable Long id) {
         return ResponseEntity.ok(eventService.getEventCapacity(id));
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Obtener detalle de un evento")
-    public ResponseEntity<EventDto> getEventById(@PathVariable Long id) {
+    public ResponseEntity<EventDTO> getEventById(@PathVariable Long id) {
         return ResponseEntity.ok(eventService.getEventById(id));
     }
 

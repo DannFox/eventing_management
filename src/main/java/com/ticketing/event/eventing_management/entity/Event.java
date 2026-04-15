@@ -40,6 +40,7 @@ public class Event {
 
     private String imageUrl;
 
+    @Column(name = "woo_product_id")
     private Long wooProductId; // ID del producto en WooCommerce
 
     @Column(nullable = false)

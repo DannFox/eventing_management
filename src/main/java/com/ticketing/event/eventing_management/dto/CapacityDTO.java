@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class CapacityDto {
+public class CapacityDTO {
     private Long eventId;
     private Long sold;
     private Long available;

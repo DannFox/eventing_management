@@ -1,0 +1,25 @@
+services:
+  event-app:
+    build: ..
+    container_name: event-management-app
+    restart: unless-stopped
+    ports:
+      - "${SERVER_PORT:-8081}:8081"
+    environment:
+      SERVER_PORT: 8081
+      DATASOURCE_URL: jdbc:mysql://mysql-events:3306/eventdb?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      DATASOURCE_USERNAME: ${MYSQL_USER:-eventuser}
+      DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-eventpass}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-guest}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+      WORDPRESS_API_URL: ${WORDPRESS_API_URL}
+    depends_on:
+      - mysql-events
+      - redis
+      - rabbitmq
+    networks:
+      - event-network

@@ -12,6 +12,7 @@ import java.util.Optional;
 @Repository
 public interface EventRepository extends JpaRepository<Event, Long> {
     Optional<Event> findByWpId(String wpId);
+    Optional<Event> findByWooProductId(Long wooProductId);
     Page<Event> findByActiveTrueAndEventDateAfter(LocalDateTime now, Pageable pageable);
     Page<Event> findByActiveTrueAndEventDateAfterAndCategory(LocalDateTime now, String category, Pageable pageable);
 }
