@@ -3,6 +3,7 @@ package com.ticketing.event.eventing_management.service.impl;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.ticketing.event.eventing_management.entity.Event;
 import com.ticketing.event.eventing_management.repository.EventRepository;
+import com.ticketing.event.eventing_management.service.WooCommerceService;
 import com.ticketing.event.eventing_management.service.WordPressService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +30,7 @@ public class WordPressServiceImpl implements WordPressService {
 
     private final RestClient.Builder restClientBuilder;
     private final EventRepository eventRepository;
+    private final WooCommerceService wooCommerceService;
 
     @Value("${wordpress.api.base-url}")
     private String wordpressBaseUrl;
@@ -97,6 +99,11 @@ public class WordPressServiceImpl implements WordPressService {
             event.setCategory(category);
             event.setImageUrl(imageUrl);
             event.setActive(true);
+
+            if (event.getWooProductId() == null) {
+                Long wooProductId = wooCommerceService.createProduct(event);
+                event.setWooProductId(wooProductId);
+            }
 
             eventRepository.save(event);
             log.info("Evento sincronizado: {}", title);
