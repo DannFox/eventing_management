@@ -117,16 +117,18 @@ public class WordPressServiceImpl implements WordPressService {
             throw new IllegalStateException("La propiedad wordpress.api.base-url no está configurada");
         }
 
-        String normalizedUrl = wordpressBaseUrl.trim();
-        while (normalizedUrl.endsWith("/")) {
-            normalizedUrl = normalizedUrl.substring(0, normalizedUrl.length() - 1);
+        String url = wordpressBaseUrl.trim();
+        // Elimina la barra final si existe
+        if (url.endsWith("/")) {
+            url = url.substring(0, url.length() - 1);
         }
 
-        if (normalizedUrl.endsWith("/event")) {
-            return normalizedUrl + "?per_page=100";
+        // Asegura que termine en /events según tu configuración de CPT UI
+        if (!url.endsWith("/events")) {
+            url += "/events";
         }
 
-        return normalizedUrl + "/event?per_page=100";
+        return url + "?per_page=100";
     }
 
     private LocalDateTime parseEventDate(String eventDateStr) {

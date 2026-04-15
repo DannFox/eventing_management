@@ -7,6 +7,7 @@ import com.ticketing.event.eventing_management.service.WooCommerceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
@@ -47,7 +48,6 @@ public class WooCommerceServiceImpl implements WooCommerceService {
 
         RestClient restClient = restClientBuilder
                 .baseUrl(wooCommerceApiUrl)
-                .defaultHeader("Authorization", "Basic " + encodeAuth)
                 .build();
 
         Map<String, Object> productData = new HashMap<>();
@@ -65,12 +65,16 @@ public class WooCommerceServiceImpl implements WooCommerceService {
                     .uri(uriBuilder -> uriBuilder
                             .path("/products")
                             // En entornos locales HTTP, WooCommerce suele aceptar mejor las credenciales por query params.
-                            .queryParam("consumer_key", consumerKey)
-                            .queryParam("consumer_secret", consumerSecret)
+                            .queryParam("consumer_key", consumerKey.trim())
+                            .queryParam("consumer_secret", consumerSecret.trim())
                             .build())
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(productData)
                     .retrieve()
+                    .onStatus(HttpStatusCode::isError, (request, res) -> {
+                        log.error("Cuerpo del error: " + res.getBody());
+                        throw new RuntimeException("Error de API: " + res.getStatusCode());
+                    })
                     .body(String.class);
 
             JsonNode jsonResponse = objectMapper.readTree(response);
