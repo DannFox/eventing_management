@@ -2,12 +2,12 @@ package com.ticketing.event.eventing_management.controller;
 
 import com.ticketing.event.eventing_management.dto.CapacityDTO;
 import com.ticketing.event.eventing_management.dto.EventDTO;
+import com.ticketing.event.eventing_management.dto.EventListResponseDTO;
 import com.ticketing.event.eventing_management.service.EventService;
 import com.ticketing.event.eventing_management.service.WordPressService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
@@ -23,10 +23,12 @@ public class EventController {
 
     @GetMapping
     @Operation(summary = "Listar eventos activos paginados")
-    public ResponseEntity<Page<EventDTO>> getEvents(
+    public ResponseEntity<EventListResponseDTO> getEvents(
             @RequestParam(required = false) String category,
+            @RequestParam(defaultValue = "false") boolean includePast,
+            @RequestParam(defaultValue = "false") boolean includeInactive,
             @PageableDefault(size = 20) Pageable pageable) {
-        return ResponseEntity.ok(eventService.getActiveEvents(category, pageable));
+        return ResponseEntity.ok(eventService.getEvents(category, includePast, includeInactive, pageable));
     }
 
     @PostMapping("/sync")

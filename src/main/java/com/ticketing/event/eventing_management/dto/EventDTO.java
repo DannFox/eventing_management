@@ -12,13 +12,14 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class EventDTO {
-        private Long id;
-        private String title;
-        private String description;
-        private LocalDateTime eventDate;
-        private String venue;
-        private Integer capacity;
-        private String category;
-        private String imageUrl;
-        private Boolean active;
+    private Long id;
+    private String title;
+    private String description;
+    private LocalDateTime eventDate;
+    private String venue;
+    private Integer capacity;
+    private String category;
+    private String imageUrl;
+    private Boolean active;
+    private String status;
 }
