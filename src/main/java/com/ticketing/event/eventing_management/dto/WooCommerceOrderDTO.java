@@ -8,6 +8,7 @@ import java.util.List;
 public class WooCommerceOrderDTO {
     private Long id;
     private String status;
+    private Long customer_id;
     private Billing billing;
     private List<LineItem> line_items;
 

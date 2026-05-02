@@ -3,6 +3,11 @@ package com.ticketing.event.eventing_management.controller;
 import com.ticketing.event.eventing_management.dto.WebhookResponseDTO;
 import com.ticketing.event.eventing_management.dto.WooCommerceOrderDTO;
 import com.ticketing.event.eventing_management.service.TicketService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +31,8 @@ public class WebhookController {
     private final TicketService ticketService;
 
     @PostMapping(value = "/webhook", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    @Operation(summary = "Validar ping inicial del webhook de WooCommerce")
+    @ApiResponse(responseCode = "200", description = "Webhook validado")
     public ResponseEntity<WebhookResponseDTO> handleWebhookPing(
             @RequestParam Map<String, String> formData) {
         log.info("Webhook recibido (Ping) - Content-Type: application/x-www-form-urlencoded");
@@ -33,6 +40,15 @@ public class WebhookController {
     }
 
     @PostMapping(value = "/webhook", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Procesar orden confirmada desde WooCommerce y crear ticket")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Orden procesada o ignorada correctamente",
+                    content = @Content(schema = @Schema(implementation = WebhookResponseDTO.class))),
+            @ApiResponse(responseCode = "400", description = "Payload invalido",
+                    content = @Content(schema = @Schema(implementation = WebhookResponseDTO.class))),
+            @ApiResponse(responseCode = "500", description = "Error interno al procesar orden",
+                    content = @Content(schema = @Schema(implementation = WebhookResponseDTO.class)))
+    })
     public ResponseEntity<WebhookResponseDTO> handleWebhookOrder(
             @RequestBody(required = false) WooCommerceOrderDTO wooCommerceOrderDTO) {
         log.info("Webhook recibido (Order) - Content-Type: application/json");

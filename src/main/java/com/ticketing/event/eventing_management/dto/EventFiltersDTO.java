@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class EventFiltersDTO {
     private String category;
+    private String date;
     private boolean includePast;
     private boolean includeInactive;
 }

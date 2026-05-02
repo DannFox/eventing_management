@@ -36,7 +36,7 @@ public class WordPressServiceImpl implements WordPressService {
     private String wordpressBaseUrl;
 
     @Override
-    @CacheEvict(value = "events", allEntries = true)
+    @CacheEvict(value = "events_v2", allEntries = true)
     public void syncEvents() {
         String eventsEndpoint = buildEventsEndpoint();
         RestClient restClient = restClientBuilder.build();

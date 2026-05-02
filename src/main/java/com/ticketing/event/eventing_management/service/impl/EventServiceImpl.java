@@ -1,5 +1,6 @@
 package com.ticketing.event.eventing_management.service.impl;
 
+import com.ticketing.event.eventing_management.dto.AttendanceDTO;
 import com.ticketing.event.eventing_management.dto.CapacityDTO;
 import com.ticketing.event.eventing_management.dto.EventDTO;
 import com.ticketing.event.eventing_management.dto.EventFiltersDTO;
@@ -7,10 +8,10 @@ import com.ticketing.event.eventing_management.dto.EventListResponseDTO;
 import com.ticketing.event.eventing_management.dto.PaginationDTO;
 import com.ticketing.event.eventing_management.entity.Event;
 import com.ticketing.event.eventing_management.entity.Ticket;
+import com.ticketing.event.eventing_management.exception.ResourceNotFoundException;
 import com.ticketing.event.eventing_management.repository.EventRepository;
 import com.ticketing.event.eventing_management.repository.TicketRepository;
 import com.ticketing.event.eventing_management.service.EventService;
-import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -23,8 +24,11 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.YearMonth;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Set;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -48,21 +52,22 @@ public class EventServiceImpl implements EventService {
 
     @Override
     @Cacheable(
-            value = "events",
-            key = "'events_' + (#category != null ? #category : 'all') + '_' + #includePast + '_' + #includeInactive + '_' + #pageable.pageNumber + '_' + #pageable.pageSize + '_' + #pageable.sort"
+            value = "events_v2",
+            key = "'events_' + (#category != null ? #category : 'all') + '_' + (#date != null ? #date : 'all') + '_' + #includePast + '_' + #includeInactive + '_' + #pageable.pageNumber + '_' + #pageable.pageSize + '_' + #pageable.sort"
     )
-    public EventListResponseDTO getEvents(String category, boolean includePast, boolean includeInactive, Pageable pageable) {
+    public EventListResponseDTO getEvents(String category, String date, boolean includePast, boolean includeInactive, Pageable pageable) {
         LocalDateTime now = LocalDateTime.now();
+        YearMonth yearMonth = parseYearMonth(date);
         Pageable safePageable = sanitizePageable(pageable);
-        Page<Event> events = eventRepository.findAll(buildEventSpecification(category, includePast, includeInactive, now), safePageable);
+        Page<Event> events = eventRepository.findAll(buildEventSpecification(category, yearMonth, includePast, includeInactive, now), safePageable);
         Page<EventDTO> eventPage = events.map(this::mapToDto);
-        return buildEventListResponse(eventPage, category, includePast, includeInactive);
+        return buildEventListResponse(eventPage, category, date, includePast, includeInactive);
     }
 
     @Override
-    public CapacityDTO getEventCapacity(Long eventId) {
+    public CapacityDTO getEventCapacity(UUID eventId) {
         Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new EntityNotFoundException("Evento no encontrado con id: " + eventId));
+                .orElseThrow(() -> new ResourceNotFoundException("Evento no encontrado con id: " + eventId));
 
         String key = SOLD_COUNTER_KEY_PREFIX + eventId;
         String soldStr = redisTemplate.opsForValue().get(key);
@@ -90,9 +95,33 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
-    public EventDTO getEventById(Long id) {
+    public AttendanceDTO getEventAttendance(UUID eventId) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento no encontrado con id: " + eventId));
+
+        long active = ticketRepository.countByEventIdAndStatus(eventId, Ticket.TicketStatus.ACTIVE);
+        long used = ticketRepository.countByEventIdAndStatus(eventId, Ticket.TicketStatus.USED);
+        long sold = active + used;
+        long available = Math.max(0, event.getCapacity() - sold);
+        double occupancyPercentage = event.getCapacity() == 0
+                ? 0.0
+                : (used * 100.0) / event.getCapacity();
+
+        return AttendanceDTO.builder()
+                .eventId(eventId)
+                .eventName(event.getTitle())
+                .sold(sold)
+                .validated(used)
+                .available(available)
+                .total(event.getCapacity())
+                .occupancyPercentage(occupancyPercentage)
+                .build();
+    }
+
+    @Override
+    public EventDTO getEventById(UUID id) {
         Event event = eventRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Evento no encontrado con id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Evento no encontrado con id: " + id));
         return mapToDto(event);
     }
 
@@ -123,7 +152,7 @@ public class EventServiceImpl implements EventService {
         return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), safeSort);
     }
 
-    private Specification<Event> buildEventSpecification(String category, boolean includePast, boolean includeInactive, LocalDateTime now) {
+    private Specification<Event> buildEventSpecification(String category, YearMonth date, boolean includePast, boolean includeInactive, LocalDateTime now) {
         return (root, query, criteriaBuilder) -> {
             var predicates = new ArrayList<Predicate>();
 
@@ -131,11 +160,21 @@ public class EventServiceImpl implements EventService {
                 predicates.add(criteriaBuilder.equal(criteriaBuilder.lower(root.get("category")), category.trim().toLowerCase()));
             }
 
+            if (date != null) {
+                LocalDateTime from = date.atDay(1).atStartOfDay();
+                LocalDateTime to = date.plusMonths(1).atDay(1).atStartOfDay();
+                predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("eventDate"), from));
+                predicates.add(criteriaBuilder.lessThan(root.get("eventDate"), to));
+            }
+
             if (!includeInactive) {
                 predicates.add(criteriaBuilder.isTrue(root.get("active")));
             }
 
-            if (!includePast) {
+            // Regla intuitiva:
+            // - Si viene filtro por mes (date), se respeta ese mes completo.
+            // - Si no viene date, includePast controla si se excluyen eventos pasados.
+            if (date == null && !includePast) {
                 predicates.add(criteriaBuilder.greaterThan(root.get("eventDate"), now));
             }
 
@@ -143,7 +182,7 @@ public class EventServiceImpl implements EventService {
         };
     }
 
-    private EventListResponseDTO buildEventListResponse(Page<EventDTO> eventPage, String category, boolean includePast, boolean includeInactive) {
+    private EventListResponseDTO buildEventListResponse(Page<EventDTO> eventPage, String category, String date, boolean includePast, boolean includeInactive) {
         return EventListResponseDTO.builder()
                 .events(eventPage.getContent())
                 .pagination(PaginationDTO.builder()
@@ -158,10 +197,23 @@ public class EventServiceImpl implements EventService {
                         .build())
                 .filters(EventFiltersDTO.builder()
                         .category(category)
+                        .date(date)
                         .includePast(includePast)
                         .includeInactive(includeInactive)
                         .build())
                 .build();
+    }
+
+    private YearMonth parseYearMonth(String date) {
+        if (date == null || date.isBlank()) {
+            return null;
+        }
+
+        try {
+            return YearMonth.parse(date.trim());
+        } catch (DateTimeParseException ex) {
+            throw new IllegalArgumentException("Formato de date invalido. Use YYYY-MM, por ejemplo 2026-03");
+        }
     }
 
     private String resolveStatus(Event event) {

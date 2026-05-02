@@ -9,11 +9,14 @@ import java.util.UUID;
 
 @Data
 @Builder
-@AllArgsConstructor
 @NoArgsConstructor
-public class CapacityDTO {
+@AllArgsConstructor
+public class AttendanceDTO {
     private UUID eventId;
+    private String eventName;
     private Long sold;
+    private Long validated;
     private Long available;
     private Integer total;
+    private double occupancyPercentage;
 }

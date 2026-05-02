@@ -27,6 +27,9 @@ public class Ticket {
     @Column(nullable = false)
     private String attendeeEmail;
 
+    @Column(name = "attendee_id")
+    private UUID attendeeId;
+
     private String attendeeName;
 
     @Enumerated(EnumType.STRING)

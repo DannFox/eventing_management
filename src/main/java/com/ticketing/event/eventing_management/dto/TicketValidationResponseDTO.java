@@ -5,15 +5,17 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
 @Builder
-@AllArgsConstructor
 @NoArgsConstructor
-public class CapacityDTO {
+@AllArgsConstructor
+public class TicketValidationResponseDTO {
+    private UUID ticketId;
     private UUID eventId;
-    private Long sold;
-    private Long available;
-    private Integer total;
+    private String status;
+    private LocalDateTime validatedAt;
+    private String message;
 }

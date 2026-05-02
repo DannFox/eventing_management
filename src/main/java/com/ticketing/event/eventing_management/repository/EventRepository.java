@@ -6,9 +6,10 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecificationExecutor<Event> {
+public interface EventRepository extends JpaRepository<Event, UUID>, JpaSpecificationExecutor<Event> {
     Optional<Event> findByWpId(String wpId);
     Optional<Event> findByWooProductId(Long wooProductId);
 }
