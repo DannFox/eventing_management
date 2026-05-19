@@ -53,7 +53,7 @@ public class WooCommerceServiceImpl implements WooCommerceService {
         Map<String, Object> productData = new HashMap<>();
         productData.put("name", event.getTitle());
         productData.put("type", "simple");
-        productData.put("regular_price", "10.00"); // Precio por defecto
+        productData.put("regular_price", "50.00"); // Precio por defecto
         productData.put("description", event.getDescription());
         productData.put("short_description", "Ticket para " + event.getTitle());
         productData.put("manage_stock", true);

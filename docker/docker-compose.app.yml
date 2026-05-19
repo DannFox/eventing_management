@@ -1,3 +1,5 @@
+# Usar junto con docker-compose.yml (incluye wordpress, mysql, etc.):
+#   docker compose --env-file docker/.env -f docker/docker-compose.yml -f docker/docker-compose.app.yml up -d --build
 services:
   event-app:
     build: ..
@@ -16,10 +18,15 @@ services:
       RABBITMQ_PORT: 5672
       RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-guest}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
-      WORDPRESS_API_URL: ${WORDPRESS_API_URL}
+      WORDPRESS_API_URL: ${WORDPRESS_API_URL:-http://wordpress/wp-json/wp/v2}
+      WOOCOMMERCE_API_URL: ${WOOCOMMERCE_API_URL:-http://wordpress/wp-json/wc/v3}
+      WOOCOMMERCE_CONSUMER_KEY: ${WOOCOMMERCE_CONSUMER_KEY}
+      WOOCOMMERCE_CONSUMER_SECRET: ${WOOCOMMERCE_CONSUMER_SECRET}
+      JPA_SHOW_SQL: ${JPA_SHOW_SQL:-false}
     depends_on:
       - mysql-events
       - redis
       - rabbitmq
+      - wordpress
     networks:
       - event-network

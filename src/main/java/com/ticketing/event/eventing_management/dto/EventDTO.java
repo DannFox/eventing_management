@@ -1,5 +1,6 @@
 package com.ticketing.event.eventing_management.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,6 +13,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Schema(description = "Evento del catalogo (sincronizado desde WordPress)")
 public class EventDTO {
     private UUID id;
     private String title;

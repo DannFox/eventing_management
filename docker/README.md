@@ -1,40 +1,57 @@
-# Flujo recomendado
+# Docker — Grupo A Event Management
 
-`docker-compose.yml` levanta solo la infraestructura compartida para desarrollo:
+## Puertos (por defecto)
 
-- MySQL
-- Redis
-- RabbitMQ
-- WordPress
+| Servicio | Puerto host | Uso |
+|----------|-------------|-----|
+| API Spring Boot | 8081 | REST, [Swagger UI](http://localhost:8081/swagger-ui.html) |
+| WordPress | 8080 | Admin y tienda WooCommerce |
+| MySQL eventos | 3307 | Base `eventdb` |
+| Redis | 6379 | Cache |
+| RabbitMQ AMQP | 5672 | Mensajes |
+| RabbitMQ Management | 15672 | UI colas y exchanges |
 
-La aplicacion Spring Boot debe correrse fuera de Docker durante desarrollo para evitar reconstruir la imagen en cada cambio.
+Variables de entorno: copia [`.env.example`](.env.example) a `docker/.env` y completa las claves WooCommerce.
 
-## Desarrollo local
+## Opcion A — Stack completo (recomendado para entrega Final)
 
-1. Levanta la infraestructura:
+Un solo archivo compose con infraestructura + aplicacion:
+
+```powershell
+copy docker\.env.example docker\.env
+# Edita docker\.env (WOOCOMMERCE_CONSUMER_KEY / SECRET)
+
+docker compose --env-file docker/.env -f docker/docker-compose.full.yml up -d --build
+```
+
+Apagado:
+
+```powershell
+docker compose --env-file docker/.env -f docker/docker-compose.full.yml down
+```
+
+## Opcion B — Solo infraestructura (desarrollo)
+
+`docker-compose.yml` levanta MySQL, Redis, RabbitMQ y WordPress. La aplicacion Spring puede ejecutarse en la maquina host con `./mvnw spring-boot:run`.
 
 ```powershell
 docker compose --env-file docker/.env -f docker/docker-compose.yml up -d
 ```
 
-2. Ejecuta la aplicacion localmente desde la raiz del proyecto:
+## Opcion C — Infra + app en Docker (dos archivos)
 
-```powershell
-./mvnw spring-boot:run
-```
-
-La configuracion de `src/main/resources/application.properties` ya apunta por defecto a `localhost` para MySQL, Redis y RabbitMQ.
-
-## Todo en Docker
-
-Si quieres correr tambien la aplicacion dentro de Docker, usa ambos archivos:
+Equivalente a la opcion A pero usando los compose originales:
 
 ```powershell
 docker compose --env-file docker/.env -f docker/docker-compose.yml -f docker/docker-compose.app.yml up -d --build
 ```
 
-## Apagado
+Apagado:
 
 ```powershell
-docker compose --env-file docker/.env -f docker/docker-compose.yml down
+docker compose --env-file docker/.env -f docker/docker-compose.yml -f docker/docker-compose.app.yml down
 ```
+
+## Flujo E2E y demo
+
+Ver [DEMO_CHECKLIST.md](DEMO_CHECKLIST.md) para sincronizacion WordPress, webhook WooCommerce, RabbitMQ y validacion de tickets (integracion con Grupo B).

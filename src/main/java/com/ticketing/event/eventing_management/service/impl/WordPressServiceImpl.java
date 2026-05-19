@@ -76,7 +76,7 @@ public class WordPressServiceImpl implements WordPressService {
             String venue = acfNode.path("venue").asText("");
             int capacity = acfNode.path("capacity").asInt(0);
             String category = extractCategory(jsonEvent);
-            String imageUrl = jsonEvent.path("featured_media_url").asText("");
+            String imageUrl = extractFeaturedImageUrl(jsonEvent);
 
             if (wpId == null || wpId.isBlank()) {
                 log.warn("Evento omitido: id de WordPress ausente");
@@ -128,7 +128,7 @@ public class WordPressServiceImpl implements WordPressService {
             url += "/events";
         }
 
-        return url + "?per_page=100";
+        return url + "?per_page=100&_embed=true";
     }
 
     private LocalDateTime parseEventDate(String eventDateStr) {
@@ -149,20 +149,46 @@ public class WordPressServiceImpl implements WordPressService {
     }
 
     private String extractCategory(JsonNode jsonEvent) {
+        // Primero intenta con _embedded (más confiable)
+        JsonNode embedded = jsonEvent.path("_embedded");
+        if (!embedded.isMissingNode()) {
+            JsonNode terms = embedded.path("wp:term");
+            if (terms.isArray()) {
+                for (JsonNode termGroup : terms) {
+                    if (termGroup.isArray()) {
+                        for (JsonNode term : termGroup) {
+                            String taxonomy = term.path("taxonomy").asText("");
+                            if ("category".equals(taxonomy)) {
+                                return term.path("name").asText("");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Fallback: si categories ya viene como objetos con nombre
         JsonNode categoriesNode = jsonEvent.path("categories");
-        if (!categoriesNode.isArray() || categoriesNode.isEmpty()) {
+        if (categoriesNode.isArray() && !categoriesNode.isEmpty()) {
+            JsonNode first = categoriesNode.get(0);
+            if (first.isObject()) {
+                return first.path("name").asText("");
+            }
+        }
+
+        return "";
+    }
+
+    private String extractFeaturedImageUrl(JsonNode jsonEvent) {
+        try {
+            return jsonEvent
+                    .path("_embedded")
+                    .path("wp:featuredmedia")
+                    .get(0)
+                    .path("source_url")
+                    .asText("");
+        } catch (Exception e) {
             return "";
         }
-
-        JsonNode firstCategory = categoriesNode.get(0);
-        if (firstCategory == null) {
-            return "";
-        }
-
-        if (firstCategory.isObject()) {
-            return firstCategory.path("name").asText("");
-        }
-
-        return firstCategory.asText("");
     }
 }
